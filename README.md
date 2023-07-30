@@ -38,6 +38,6 @@ Left-clicking on TNT can make TNT explode.
 
 ## Previous Versions
 
-- 1.0.0 Beta - First Beta release
+- 1.0.0 Beta - First Beta release.
 
-- 1.1.0 Beta
+- 1.1.0 Beta - Updated ore generation algorithm, added different rock and terrain areas, many updates.
