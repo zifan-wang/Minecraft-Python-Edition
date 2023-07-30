@@ -1,4 +1,4 @@
-Minecraft Python Edition by ZifanWang, imitate minecraft.
+Minecraft Python Edition by ZifanWang, imitate Minecraft.
 
 Based on https://github.com/fogleman/Minecraft.
 
@@ -25,6 +25,8 @@ Right click to place blocks,Left click to destroy blocks.
 Left-clicking on TNT can make TNT explode.
 
 ### Blocks
+
+Press number keys to select them.
 
 1. grass
 2. dirt
