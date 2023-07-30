@@ -36,6 +36,21 @@ Left-clicking on TNT can make TNT explode.
 8. melon
 9. TNT
 
+## Images
+
+![](/img/1.png)
+
+![](/img/2.png)
+
+![](/img/3.png)
+
+![](/img/4.png)
+
+![](/img/5.png)
+
+![](/img/6.png)
+
+
 ## Previous Versions
 
 - 1.0.0 Beta - First Beta release.
