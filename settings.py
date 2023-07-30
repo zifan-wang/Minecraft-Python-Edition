@@ -1,3 +1,4 @@
+import random
 import math
 
 TICKS_PER_SEC = 150
@@ -27,13 +28,10 @@ DEEP = 16 # 世界深度
 TEXTURE_PATH = 'texture.png' # 纹理文件
 
 NRC = []
-#DNRC = []
 
 def initNRC():
-
     def sort_key(p):
         return p[0] ** 2 + p[1] ** 2
-
     pad = 4
     for x in range(-pad, pad + 1):
         for z in range(-pad, pad + 1):
@@ -41,8 +39,15 @@ def initNRC():
                 NRC.append((x * BASELEN, z * BASELEN))
     NRC.sort(key=sort_key)
     print('NRC size: ',len(NRC))
-    #for x in range(-1,2):
-    #    for y in range(-1,2):
-    #        DNRC.append((x*64, y*64))
 
 initNRC()
+
+SEED = random.randint(10, 1000000) # 世界种子
+print('seed:', SEED)
+random.seed(SEED)
+
+persistence = 0.5
+Number_Of_Octaves = 1
+noise_seed = random.randint(1, 100)
+print('noise seed:', noise_seed)
+

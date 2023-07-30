@@ -1,14 +1,16 @@
 """
 Name: Minecraft Python Edition
-Version: v1.0.0-beta
+Version: 1.1.0 Beta
 Python-version: 3.9
 Home-page: zifan.site
 Author: Zifan
 Author-email:
 License: GPL3.0
+
+pyglet==1.5.27
+
 """
 import sys
-import random
 import time
 import threading
 import noise
@@ -21,10 +23,6 @@ from pyglet.window import key, mouse
 from settings import *
 from texture import *
 
-SEED = random.randint(10, 1000000)#656795(种子"akioi") # 世界种子
-print('seed:', SEED)
-random.seed(SEED)
-
 
 def normalize(position):
     # 将三维坐标'position'的x、y、z取近似值
@@ -32,12 +30,8 @@ def normalize(position):
     x, y, z = (round(x), round(y), round(z))
     return (x, y, z)
 
-persistence = 0.5
-Number_Of_Octaves = 1
-noise_seed = random.randint(1, 100)
-print('noise seed:', noise_seed)
-
 threads = deque() # 多线程队列
+
 
 class mbatch:
     def __init__(self):
@@ -59,33 +53,6 @@ class mbatch:
             if (x, z) in self.batch:
                 self.batch[(x, z)].draw()
 
-def get_mine(d):
-    d = (1 - d) / DEEP
-    ds = random.random()
-    if d < 0.5 or d > 0.8:
-        if ds < 0.96:
-            return STONE
-        elif ds < 0.985:
-            return COAL
-        elif ds < 0.998:
-            return IRNO
-        elif ds < 0.9997:
-            return GOLDO
-        else:
-            return DIMO
-
-    else:
-        if ds < 0.95:
-            return STONE
-        elif ds < 0.98:
-            return COAL
-        elif ds < 0.996:
-            return IRNO
-        elif ds < 0.9986:
-            return GOLDO
-        else:
-            return DIMO
-
 
 class Model(object):
 
@@ -98,6 +65,7 @@ class Model(object):
         self._shown = {} # 显示的纹理
         self.pool = {} # 水池
         self.areat = {}
+        self.mine = {}
         self.queue = deque() # 指令队列
         print("Loading...")
         self.dfy = self._initialize()
@@ -105,32 +73,101 @@ class Model(object):
 
     def tree(self, y, x, z, flag=True):
         # 生成树
-        th = random.randint(4, 6)
-        ts = random.randint(th // 2, 4)
+        th = random.randint(3, 5)
+        if th == 5:
+            ts = 3
+        else:
+            ts = 3 if random.randint(1, 4) == 1 else 2
+        mode = ts == 2 and random.random() > 0.3
+
         if flag:
             for i in range(y, y + th):
                 self.add_block((x, i, z), WOOD)
-            for dy in range(y + th, y + th + 2):
-                 for dx in range(x - ts, x + ts + 1):
-                    for dz in range(z - ts, z + ts + 1):
-                        self.add_block((dx, dy, dz), LEAF)
-            for dy in range(y + th + 2, y + th + ts + 2):
-                ts -= 1
-                for dx in range(x - ts, x + ts + 1):
-                    for dz in range(z - ts, z + ts + 1):
-                        self.add_block((dx, dy, dz), LEAF)
+            for dx in range(x - ts, x + ts + 1):
+                for dz in range(z - ts, z + ts + 1):
+                    if (dx == x - ts or dx == x + ts) and (dz == z - ts or dz == z + ts) and random.randint(1, 6) == 1:
+                         continue
+                    self.add_block((dx, y + th, dz), LEAF)
+                    if (dx == x - ts or dx == x + ts) and (dz == z - ts or dz == z + ts) and random.randint(1, 4) == 1:
+                         continue
+                    self.add_block((dx, y + th + 1, dz), LEAF)
+            if mode:
+                for i in range(2):
+                    self.add_block((x, y + th + 2 + i, z), LEAF)
+                    self.add_block((x - 1, y + th + 2 + i, z), LEAF)
+                    self.add_block((x + 1, y + th + 2 + i, z), LEAF)
+                    self.add_block((x, y + th + 2 + i, z - 1), LEAF)
+                    self.add_block((x, y + th + 2 + i, z + 1), LEAF)
+            else:
+                for dy in range(y + th + 2, y + th + ts + 2):
+                    ts -= 1
+                    for dx in range(x - ts, x + ts + 1):
+                        for dz in range(z - ts, z + ts + 1):
+                            self.add_block((dx, dy, dz), LEAF)
         else:
             for i in range(y, y + th):
                 self._enqueue(self.add_block, (x, i, z), WOOD)
-            for dy in range(y + th, y + th + 2):
-                 for dx in range(x - ts, x + ts + 1):
-                    for dz in range(z - ts, z + ts + 1):
-                        self._enqueue(self.add_block, (dx, dy, dz), LEAF)
-            for dy in range(y + th + 2, y + th + ts + 2):
-                ts -= 1
-                for dx in range(x - ts, x + ts + 1):
-                    for dz in range(z - ts, z + ts + 1):
-                        self._enqueue(self.add_block, (dx, dy, dz), LEAF)
+            for dx in range(x - ts, x + ts + 1):
+                for dz in range(z - ts, z + ts + 1):
+                    if (dx == x - ts or dx == x + ts) and (dz == z - ts or dz == z + ts) and random.randint(1, 6) == 1:
+                        continue
+                    self._enqueue(self.add_block, (dx, y + th, dz), LEAF)
+                    if (dx == x - ts or dx == x + ts) and (dz == z - ts or dz == z + ts) and random.randint(1, 4) == 1:
+                         continue
+                    self._enqueue(self.add_block, (dx, y + th + 1, dz), LEAF)
+            if mode:
+                for i in range(2):
+                    self._enqueue(self.add_block, (x, y + th + 2 + i, z), LEAF)
+                    self._enqueue(self.add_block, (x - 1, y + th + 2 + i, z), LEAF)
+                    self._enqueue(self.add_block, (x + 1, y + th + 2 + i, z), LEAF)
+                    self._enqueue(self.add_block, (x, y + th + 2 + i, z - 1), LEAF)
+                    self._enqueue(self.add_block, (x, y + th + 2 + i, z + 1), LEAF)
+            else:
+                for dy in range(y + th + 2, y + th + ts + 2):
+                    ts -= 1
+                    for dx in range(x - ts, x + ts + 1):
+                        for dz in range(z - ts, z + ts + 1):
+                            self._enqueue(self.add_block, (dx, dy, dz), LEAF)
+
+    def get_mine(self, x, y, z):
+        if (x, y, z) in self.mine:
+            return MINE[self.mine[(x, y, z)]]
+        d = (1 - y) / DEEP
+        ds = random.random()
+        s = 0
+        if d < 0.5 or d > 0.8:
+            if ds < 0.9930:
+                s = 0
+            elif ds < 0.9982:
+                s = 4
+            elif ds < 0.9995:
+                s = 3
+            elif ds < 0.9999:
+                s = 2
+            else:
+                s = 1
+
+        else:
+            if ds < 0.99:
+                s = 0
+            elif ds < 0.996:
+                s = 4
+            elif ds < 0.999:
+                s = 3
+            elif ds < 0.9998:
+                s = 2
+            else:
+                s = 1
+
+        self.mine[(x, y, z)] = s
+        if s != 0:
+            for i in range(0, 2):
+                for j in range(0, 2):
+                    for k in range(0, 2):
+                        if (x+i, y+j, z+k) not in self.mine:
+                            self.mine[(x+i, y+j, z+k)] = s
+
+        return MINE[s]
 
     def _initialize(self):
         # 初始化世界
@@ -139,7 +176,7 @@ class Model(object):
         gmap = [[0 for x in range(0, WORLDLEN)]for z in range(0, WORLDLEN)]
         quality = 16
         mul = 8
-        
+        print('Generating terrain...')
         for x in range(-hl, hl):
             for z in range(-hl, hl):
                 gmap[x][z] = round(noise.pnoise2(
@@ -151,6 +188,7 @@ class Model(object):
                 mn = min(mn, gmap[x][z])
         mn = abs(mn)
         self.mn = mn
+        print('Generating world...')
         for x in range(-hl, hl):
             for z in range(-hl, hl):
                 self.areat[(int(x / BASELEN) * BASELEN, int(z / BASELEN) * BASELEN)] = 1
@@ -162,46 +200,116 @@ class Model(object):
                     self.pool[(x, 1, z)] = 1
                     self._show_block((x, 1, z), WATER)
                     for y in range(-DEEP + 1, -1):
-                        if noise.pnoise3(x / quality, (y + DEEP) / quality, z / quality,
+                        n = noise.pnoise3(x / quality, (y + DEEP) / quality, z / quality,
                                          octaves = Number_Of_Octaves,
                                          persistence = persistence,
-                                         base = noise_seed) > -0.4 or y > -3 or y < -DEEP + 3:
-                            self.add_block((x, y, z), get_mine(y))
+                                         base = noise_seed)
+                        if n > -0.4 or y > -3 or y < -DEEP + 3:
+                            mine = self.get_mine(x, y, z)
+                            if mine == STONE:
+                                if y < -DEEP * 0.3 and ((n > -0.1 and n < 0) or n < -0.41):mine = ANDESITE
+                                elif y < -DEEP * 0.4 and n > 0.1 and n < 0.2:mine = GRANITE
+                                elif y < -DEEP * 0.5 and n > 0.25 and n < 0.3:mine = DIORITE
+                            self.add_block((x, y, z), mine)
                 else:
                     for y in range(-DEEP + 1, gmap[x][z]):
                         if y < 2:
-                            if noise.pnoise3(x / quality, (y + DEEP) / quality, z / quality,
+                            n = noise.pnoise3(x / quality, (y + DEEP) / quality, z / quality,
                                              octaves = Number_Of_Octaves,
                                              persistence = persistence,
-                                             base = noise_seed) > -0.4 or y > -2 or y < -DEEP + 3:
-                                self.add_block((x, y, z), get_mine(y))
-                        else:
+                                             base = noise_seed)
+                            if n > -0.4 or y > -2 or y < -DEEP + 3:
+                                mine = self.get_mine(x, y, z)
+                                if mine == STONE:
+                                    if y < -DEEP * 0.3 and ((n > -0.1 and n < 0) or n < -0.41):mine = ANDESITE
+                                    elif y < -DEEP * 0.4 and n > 0.1 and n < 0.2:mine = GRANITE
+                                    elif y < -DEEP * 0.5 and n > 0.25 and n < 0.3:mine = DIORITE
+                                self.add_block((x, y, z), mine)
+                        elif y >= gmap[x][z] - 1:
                             self.add_block((x, y, z), DIRT)
+                        else:
+                            self.add_block((x, y, z), STONE)
                     self.add_block((x, gmap[x][z], z), GRASS)
                 self.add_block((x, -DEEP, z), ENDSTONE)
+        print('Generating trees...')
         for x in range(-hl, hl, 4):
             for z in range(-hl, hl, 4):
                 if x == 0 and z == 0:
                     continue
-                if random.randint(1, 5) == 1 and gmap[x][z] > 1:
+                if random.randint(1, 8) == 1 and gmap[x][z] > 1:
                     self.tree(gmap[x][z] + 1, x, z)
                     for i in range(x, x + 4):
                         for j in range(z, z + 4):
                             self._show_block((i, 30, j), CLOUD)
-                elif random.randint(1, 6) == 1 and gmap[x][z] > 2:
-                    self.add_block((x, gmap[x][z] + 1, z), random.choice([PUMKEY, MELON]))
+                elif random.randint(1, 8) == 1 and gmap[x][z] > 2:
+                    if random.randint(1, 2) == 1:
+                        self.add_block((x, gmap[x][z] + 1, z), random.choice([PUMKIN, PUMKIN, PUMKIN_FACE1, PUMKIN_FACE2, PUMKIN_FACE3, PUMKIN_FACE4]))
+                    else:
+                        self.add_block((x, gmap[x][z] + 1, z), MELON)
         return gmap[0][0] + 2
 
-    def initpart(self, dx, dz):
-        random.seed(SEED)
-        gmap = [[0 for x in range(0, BASELEN)]for z in range(0, BASELEN)]
-        mode = self.areat[(dx, dz)]
+    def getsand(self):
+        result = []
+        func = [tex_coord, tex_coord1, tex_coord2, tex_coord3]
+        result.extend(random.choice(func)(1, 1) * 6)
+        return result
 
+    def initdesert(self, dx, dz):
+        gmap = [[0 for x in range(0, BASELEN)]for z in range(0, BASELEN)]
+        hole = [[0 for x in range(0, BASELEN)]for z in range(0, BASELEN)]
         quality = 16
         mul = 8
         for x in range(0, BASELEN):
             for z in range(0, BASELEN):
-                gmap[x][z] += round(noise.pnoise2(
+                gmap[x][z] = round(noise.pnoise2(
+                                        (dx + x) / quality, (dz + z) / quality,
+                                        octaves = Number_Of_Octaves,
+                                        persistence = persistence,
+                                        base = noise_seed
+                                    ) * mul)
+        for x in range(0, BASELEN):
+            for z in range(0, BASELEN):
+                gmap[x][z] = max(gmap[x][z] + self.mn, 2)
+                xx = x + dx
+                zz = z + dz
+                for y in range(-DEEP + 1, gmap[x][z] + 1):
+                    if y < 2:
+                        n = noise.pnoise3(xx / quality, (y + DEEP) / quality, zz / quality,
+                                          octaves = Number_Of_Octaves,
+                                          persistence = persistence,
+                                          base = noise_seed)
+                        if n > -0.4 or y > -2 or y < -DEEP + 3:
+                            mine = self.get_mine(xx, y, zz)
+                            if mine == STONE:
+                                if y < -DEEP * 0.3 and ((n > -0.1 and n < 0) or n < -0.41):mine = ANDESITE
+                                elif y < -DEEP * 0.4 and n > 0.1 and n < 0.2:mine = GRANITE
+                                elif y < -DEEP * 0.5 and n > 0.25 and n < 0.3:mine = DIORITE
+                            self._enqueue(self.add_block, (xx, y, zz), mine)
+                    else:
+                        self._enqueue(self.add_block, (xx, y, zz), self.getsand())
+                self._enqueue(self.add_block, (xx, -DEEP, zz), ENDSTONE)
+        for x in range(0, BASELEN, 4):
+            for z in range(0, BASELEN, 4):
+                xx = x + dx
+                zz = z + dz
+                if random.randint(1, 16) == 1:
+                    tall = random.randint(2, 4)
+                    for i in range(tall):
+                        self._enqueue(self.add_block, (xx, gmap[x][z] + i + 1, zz), CACTUS)
+
+    def initpart(self, dx, dz):
+        random.seed(SEED)
+        mode = self.areat[(dx, dz)]
+        if mode == 0:
+            self.initdesert(dx, dz)
+            return
+        gmap = [[0 for x in range(0, BASELEN)]for z in range(0, BASELEN)]
+        hole = [[0 for x in range(0, BASELEN)]for z in range(0, BASELEN)]
+        quality = 16
+        mul = 8 if mode <= 2 else 16 * (mode - 2)
+        for x in range(0, BASELEN):
+            for z in range(0, BASELEN):
+                gmap[x][z] = round(noise.pnoise2(
                                         (dx + x) / quality, (dz + z) / quality,
                                         octaves = Number_Of_Octaves,
                                         persistence = persistence,
@@ -210,7 +318,7 @@ class Model(object):
 
         for x in range(0, BASELEN):
             for z in range(0, BASELEN):
-                gmap[x][z] += self.mn
+                gmap[x][z] += self.mn if mode <= 2 else self.mn + 2
                 xx = x + dx
                 zz = z + dz
                 if gmap[x][z] < 2:
@@ -224,34 +332,71 @@ class Model(object):
                         self.pool[(xx, 1, zz)] = 1
                         self._enqueue(self._show_block, (xx, 1, zz), WATER)
                     for y in range(-DEEP + 1, -1):
-                        if noise.pnoise3((dx + x) / quality, (y + DEEP) / quality, (dz + z) / quality,
+                        n = noise.pnoise3(xx / quality, (y + DEEP) / quality, zz / quality,
                                          octaves = Number_Of_Octaves,
                                          persistence = persistence,
-                                         base = noise_seed) > -0.4 or y > -3 or y < -DEEP + 3:
-                            self._enqueue(self.add_block, (xx, y, zz), get_mine(y))
+                                         base = noise_seed)
+                        if n > -0.4 or y > -3 or y < -DEEP + 3:
+                            mine = self.get_mine(xx, y, zz)
+                            if mine == STONE:
+                                if y < -DEEP * 0.3 and ((n > -0.1 and n < 0) or n < -0.41):mine = ANDESITE
+                                elif y < -DEEP * 0.4 and n > 0.1 and n < 0.2:mine = GRANITE
+                                elif y < -DEEP * 0.5 and n > 0.25 and n < 0.3:mine = DIORITE
+                            self._enqueue(self.add_block, (xx, y, zz), mine)
                 else:
                     for y in range(-DEEP + 1, gmap[x][z]):
+                        n = noise.pnoise3(xx / quality, (y + DEEP) / quality, zz / quality,
+                                          octaves = Number_Of_Octaves,
+                                          persistence = persistence,
+                                          base = noise_seed)
+                        if n < -0.5 and (hole[x][z] == 1 or y < 2) and hole[x][z] != 2:
+                            hole[x][z] = 1
+                            continue
+                        elif y >= 2:
+                            hole[x][z] = 2
                         if y < 2:
-                            if noise.pnoise3((dx + x) / quality, (y + DEEP) / quality, (dz + z) / quality,
-                                             octaves = Number_Of_Octaves,
-                                             persistence = persistence,
-                                             base = noise_seed) > -0.4 or y > -2 or y < -DEEP + 3:
-                                self._enqueue(self.add_block, (xx, y, zz), get_mine(y))
-                        else:
+                            if n > -0.4 or y > -2 or y < -DEEP + 3:
+                                mine = self.get_mine(xx, y, zz)
+                                if mine == STONE:
+                                    if y < -DEEP * 0.3 and ((n > -0.1 and n < 0) or n < -0.41):mine = ANDESITE
+                                    elif y < -DEEP * 0.4 and n > 0.1 and n < 0.2:mine = GRANITE
+                                    elif y < -DEEP * 0.5 and n > 0.25 and n < 0.3:mine = DIORITE
+                                self._enqueue(self.add_block, (xx, y, zz), mine)
+                        elif y >= gmap[x][z] - 1:
                             self._enqueue(self.add_block, (xx, y, zz), DIRT)
-                    self._enqueue(self.add_block, (xx, gmap[x][z], zz), GRASS if mode == 1 else SNOW)
+                        else:
+                            self._enqueue(self.add_block, (xx, y, zz), STONE)
+                    if noise.pnoise3(xx / quality, (gmap[x][z] + DEEP) / quality, zz / quality,
+                                     octaves = Number_Of_Octaves,
+                                     persistence = persistence,
+                                     base = noise_seed) >= -0.5 or hole[x][z] != 1:
+                        self._enqueue(self.add_block, (xx, gmap[x][z], zz), GRASS if mode == 1 else SNOW)
                 self._enqueue(self.add_block, (xx, -DEEP, zz), ENDSTONE)
         for x in range(0, BASELEN, 4):
             for z in range(0, BASELEN, 4):
+                if hole[x][z]:
+                    continue
                 xx = x + dx
                 zz = z + dz
-                if random.randint(1, 5) == 1 and gmap[x][z] > 1:
-                    self.tree(gmap[x][z] + 1, xx, zz, False)
-                    for i in range(xx, xx + 4):
-                        for j in range(zz, zz + 4):
-                            self._enqueue(self._show_block, (i, 30, j), CLOUD)
-                elif random.randint(1, 6) == 1 and gmap[x][z] > 2:
-                    self._enqueue(self.add_block, (xx, gmap[x][z] + 1, zz), random.choice([PUMKEY, MELON]))
+                if mode == 1:
+                    if random.randint(1, 8) == 1 and gmap[x][z] > 1:
+                        self.tree(gmap[x][z] + 1, xx, zz, False)
+                        for i in range(xx, xx + 4):
+                            for j in range(zz, zz + 4):
+                                self._enqueue(self._show_block, (i, 30, j), CLOUD)
+                    elif random.randint(1, 8) == 1 and gmap[x][z] > 2:
+                        if random.randint(1, 2) == 1:
+                            self._enqueue(self.add_block, (xx, gmap[x][z] + 1, zz), random.choice([PUMKIN, PUMKIN, PUMKIN_FACE1, PUMKIN_FACE2, PUMKIN_FACE3, PUMKIN_FACE4]))
+                        else:
+                            self._enqueue(self.add_block, (xx, gmap[x][z] + 1, zz), MELON)
+                else:
+                    if random.randint(1, 16) == 1 and gmap[x][z] > 1:
+                        self.tree(gmap[x][z] + 1, xx, zz, False)
+                        for i in range(xx, xx + 4):
+                            for j in range(zz, zz + 4):
+                                self._enqueue(self._show_block, (i, 30, j), CLOUD)
+                    elif random.randint(1, 15) == 1 and gmap[x][z] > 2:
+                        self._enqueue(self.add_block, (xx, gmap[x][z] + 1, zz), random.choice([PUMKIN, PUMKIN, PUMKIN_FACE1, PUMKIN_FACE2, PUMKIN_FACE3, PUMKIN_FACE4]))
 
     def hit_test(self, position, vector, max_distance=8):
         m = 8
@@ -366,7 +511,7 @@ class Window(pyglet.window.Window):
         self.pa = False
         self.ps = False
         self.pd = False
-        self.inventory = [GRASS, DIRT, STONE, SAND, WOOD, BRICK, PUMKEY, MELON, TNT]
+        self.inventory = [GRASS, DIRT, STONE, SAND, WOOD, BRICK, PUMKIN, MELON, TNT]
         self.block = self.inventory[0]
         self.num_keys = [
             key._1, key._2, key._3, key._4, key._5,
@@ -432,26 +577,31 @@ class Window(pyglet.window.Window):
             GDAY = -GDAY
         self.model.process_queue()
         x, y, z = self.position
-        flag = False
+        self.swimming = False
         for i in range(0, PLAYER_HEIGHT):
             if normalize((x, y - i, z)) in self.model.pool:
-                flag = True
+                self.swimming = True
                 break
-        self.swimming = flag
         dx = int(self.position[0] / BASELEN) * BASELEN
         dz = int(self.position[2] / BASELEN) * BASELEN
-        quality = 128
+        quality = 256
         for ax, az in NRC:
             x = dx + ax
             z = dz + az
             if (x, z) not in self.model.areat:
-                if noise.pnoise2(x / quality, z / quality,
-                                 octaves = Number_Of_Octaves,
-                                 persistence = persistence,
-                                 base = noise_seed) > 0:
+                self.model.areat[(x, z)] = 1
+                n = noise.pnoise2(x / quality, z / quality,
+                                 octaves = 1,
+                                 persistence = 0.3,
+                                 base = noise_seed)
+                if n < -0.08:
                     self.model.areat[(x, z)] = 1
-                else:
+                elif n < 0.08:
+                    self.model.areat[(x, z)] = 0
+                elif n < 0.3:
                     self.model.areat[(x, z)] = 2
+                else:
+                    self.model.areat[(x, z)] = 3 + n
                 threads.append((x, z))
         m = 8
         dt = min(dt, 0.2)
