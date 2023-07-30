@@ -1,14 +1,11 @@
 """
 Name: Minecraft Python Edition
-Version: 1.1.0 Beta
+Version: v1.1.0-beta
 Python-version: 3.9
 Home-page: zifan.site
 Author: Zifan
 Author-email:
 License: GPL3.0
-
-pyglet==1.5.27
-
 """
 import sys
 import time
