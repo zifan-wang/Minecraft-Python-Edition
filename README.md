@@ -1,4 +1,4 @@
-Minecraft Python Edition by ZifanWang, imitate Minecraft.
+Minecraft Python Edition by ZifanWang, written in Python and Pyglet.
 
 Based on https://github.com/fogleman/Minecraft.
 
